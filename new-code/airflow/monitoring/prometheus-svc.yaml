@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus-airflow-svc
+  labels:
+    app: prometheus-airflow
+spec:
+  type: ClusterIP
+  ports:
+  - port: 9090
+    name: prom
+    targetPort: 9090
+  selector:
+    app: prometheus-airflow

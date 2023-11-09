@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: adminapi-service-bridge
+  namespace: web
+spec:
+  type: ExternalName
+  externalName: adminapi-service.webapi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: clientapi-service-bridge
+  namespace: web
+spec:
+  type: ExternalName
+  externalName: clientapi-service.webapi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: accountapi-service-bridge
+  namespace: web
+spec:
+  type: ExternalName
+  externalName: accountapi-service.webapi

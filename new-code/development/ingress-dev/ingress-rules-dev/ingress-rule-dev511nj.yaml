@@ -1,0 +1,86 @@
+# Please edit the object below. Lines beginning with a '#' will be ignored,
+# and an empty file will abort the edit. If an error occurs while saving this file will be
+# reopened with the relevant failures.
+#
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-issuer
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"networking.k8s.io/v1","kind":"Ingress","metadata":{"annotations":{"cert-manager.io/cluster-issuer":"letsencrypt-issuer","kubernetes.io/ingress.class":"nginx-dev","nginx.ingress.kubernetes.io/ssl-redirect":"true","service.beta.kubernetes.io/azure-load-balancer-internal":"true"},"name":"ingress-rule-dev511nj","namespace":"webdev"},"spec":{"ingressClassName":"nginx-dev","rules":[{"host":"dev511nj.isgsuite.com","http":{"paths":[{"backend":{"service":{"name":"web-dev-svc","port":{"number":80}}},"path":"/","pathType":"Prefix"},{"backend":{"service":{"name":"keycloak-dev","port":{"number":80}}},"path":"/keyclaok","pathType":"Prefix"}]}}],"tls":[{"hosts":["dev511nj.isgsuite.com"],"secretName":"dev511nj-secret"}]}}
+    kubernetes.io/ingress.class: nginx-dev
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    service.beta.kubernetes.io/azure-load-balancer-internal: "true"
+  name: ingress-rule-dev511nj
+  namespace: webdev
+spec:
+  ingressClassName: nginx-dev
+  rules:
+  - host: dev511nj.isgsuite.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: web-dev-svc
+            port:
+              number: 80
+        path: /
+        pathType: Prefix
+      - backend:
+          service:
+            name: martin-tile-svc-dev
+            port:
+              number: 80
+        path: /catalog
+        pathType: Prefix
+      - backend:
+          service:
+            name: martin-tile-svc-dev
+            port:
+              number: 80
+        path: /livespeed_func_param
+        pathType: Prefix
+      - backend:
+          service:
+            name: martin-tile-svc-dev
+            port:
+              number: 80
+        path: /osmvectortile
+        pathType: Prefix
+      - backend:
+          service:
+            name: clientapidev-service-bridge
+            port:
+              number: 80
+        path: /client
+        pathType: Prefix
+      - backend:
+          service:
+            name: adminapidev-service-bridge
+            port:
+              number: 80
+        path: /admin
+        pathType: Prefix
+      - backend:
+          service:
+            name: accountapidev-service-bridge
+            port:
+              number: 80
+        path: /account
+        pathType: Prefix
+      - backend:
+          service:
+            name: martin-tile-svc-dev
+            port:
+              number: 80
+        path: /livespeed_func_param_all_state
+        pathType: Prefix
+  tls:
+  - hosts:
+    - dev511nj.isgsuite.com
+    secretName: dev511nj-secret
+status:
+  loadBalancer:
+    ingress:
+    - ip: 10.224.2.63

@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: Service
+metadata:
+  annotations: 
+    service.beta.kubernetes.io/azure-load-balancer-internal: "true"
+  namespace: web
+  name: martin-tile-svc
+  labels:
+    app: martin-tile
+spec:
+  ports:
+  - port: 3000
+    name: martin
+  - port: 80
+    name: nginix
+  - name: ext
+    port: 9080
+    protocol: TCP
+    targetPort: 3000
+  type: LoadBalancer
+  selector:
+    app: martin-tile

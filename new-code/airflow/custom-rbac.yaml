@@ -1,0 +1,96 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  labels:
+    app: airflow
+    type: airflow
+  name: airflow
+  namespace: db
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  verbs:
+  - list
+  - get
+  - watch
+- apiGroups:
+  - "apps"
+  resources:
+  - deployments
+  - statefulsets
+  verbs:
+  - list
+  - get
+  - watch
+  - update
+- apiGroups:
+  - "apps"
+  resources:
+  - deployments/status
+  verbs:
+  - get
+  # - list
+  # - watch
+  # - update
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  labels:
+    app: airflow
+    type: airflow
+  name: airflow
+  namespace: db
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: airflow
+subjects:
+- kind: ServiceAccount
+  name: airflow
+  namespace: airflow
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: airflow-reader
+rules:
+- apiGroups: 
+  - ""
+  resources: 
+  - pods
+  verbs: 
+  - get 
+  - list
+  - watch
+- apiGroups:
+  - "apps"
+  resources:
+  - deployments
+  - statefulsets
+  verbs:
+  - list
+  - get
+  - watch
+- apiGroups: 
+  - "metrics.k8s.io"
+  resources: 
+  - pods
+  verbs: 
+  - get
+  - list
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: airflow-reader-binding
+roleRef:
+  kind: ClusterRole
+  name: airflow-reader
+  apiGroup: rbac.authorization.k8s.io
+subjects:
+- kind: ServiceAccount
+  name: airflow
+  namespace: airflow

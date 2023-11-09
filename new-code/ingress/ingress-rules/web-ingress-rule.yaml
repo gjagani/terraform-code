@@ -1,0 +1,76 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-issuer
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    service.beta.kubernetes.io/azure-load-balancer-internal: "true"
+  name: ingress-rule-stg511nj
+  namespace: web
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: stg511nj.isgsuite.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: web-service
+            port:
+              number: 80
+        path: /
+        pathType: Prefix
+      - backend:
+          service:
+            name: martin-tile-svc
+            port:
+              number: 3000
+        path: /catalog
+        pathType: Prefix
+      - backend:
+          service:
+            name: martin-tile-svc
+            port:
+              number: 3000
+        path: /livespeed_func_param
+        pathType: Prefix
+      - backend:
+          service:
+            name: martin-tile-svc
+            port:
+              number: 3000
+        path: /osmvectortile
+        pathType: Prefix
+      - backend:
+          service:
+            name: clientapidev-service-bridge
+            port:
+              number: 80
+        path: /client
+        pathType: Prefix
+      - backend:
+          service:
+            name: adminapidev-service-bridge
+            port:
+              number: 80
+        path: /admin
+        pathType: Prefix
+      - backend:
+          service:
+            name: accountapi-service-bridge
+            port:
+              number: 80
+        path: /account
+        pathType: Prefix
+      - backend:
+          service:
+            name: accountapidev-service-bridge
+            port:
+              number: 80
+        path: /accountdev
+        pathType: Prefix
+  tls:
+  - hosts:
+    - stg511nj.isgsuite.com
+    secretName: stg511nj-secret
+

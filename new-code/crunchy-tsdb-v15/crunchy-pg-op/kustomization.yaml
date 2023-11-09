@@ -1,0 +1,10 @@
+secretGenerator:
+- name: 511nj-azure-secret
+  files:
+  - azure-storage-credential.conf
+
+generatorOptions:
+  disableNameSuffixHash: true
+
+#resources:
+#- pg-cluster.yaml

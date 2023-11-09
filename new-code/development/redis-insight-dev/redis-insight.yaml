@@ -1,0 +1,98 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redisinsight-dev
+  namespace: dbdev
+  labels:
+    app: redisinsight-dev
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redisinsight-dev
+  template:
+    metadata:
+      labels:
+        app: redisinsight-dev
+    spec:
+      initContainers:
+        - name: init
+          image: busybox
+          command:
+            - /bin/sh
+            - '-c'
+            - chown -R 1001 /db
+          resources: {}
+          volumeMounts:
+            - name: dbdev
+              mountPath: /db
+          terminationMessagePath: /db/termination-log
+          terminationMessagePolicy: File
+      # imagePullSecrets:
+      # - name: acr-auth-isgdfecontainers
+      containers:
+      - name:  redisinsight-dev
+        image: redislabs/redisinsight:1.14.0
+        imagePullPolicy: IfNotPresent
+        volumeMounts:
+        - name: dbdev
+          mountPath: /db
+        ports:
+        - containerPort: 8001
+          protocol: TCP
+      volumes:
+      - name: dbdev
+        persistentVolumeClaim:
+          claimName: redis-insight-pvc-dev
+      nodeSelector:
+        redins: "true"
+      tolerations:
+      - key: "kubernetes.azure.com/scalesetpriority"
+        operator: "Equal"
+        value: "spot"
+        effect: "NoSchedule"
+      affinity: 
+        podAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100  
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: type
+                  operator: In
+                  values:
+                  - monitor
+              topologyKey: "kubernetes.io/hostname"
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: type
+                operator: In
+                values:
+                - db
+                - web
+                - webapi
+                - gw
+                - de
+                - kb
+                - fus
+                - col 
+                - di
+            topologyKey: "kubernetes.io/hostname"
+            namespaces: ["web","db","webapi","gw","de","kb","fus","monitoring","col","airflow","di"]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redisinsight-service-dev
+  namespace: dbdev
+  annotations:
+    service.beta.kubernetes.io/azure-load-balancer-internal: "true"
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 9020
+    targetPort: 8001
+  selector:
+    app: redisinsight-dev

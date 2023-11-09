@@ -1,0 +1,290 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: kafka-servicemonitor
+  labels:
+    app: kafka
+    kafka_cr: kafka
+    release: prometheus-operator
+spec:
+  selector:
+    matchLabels:
+      app: kafka
+      kafka_cr: kafka
+  namespaceSelector:
+    matchNames:
+    - kb
+  endpoints:
+  - interval: 10s
+    port: metrics
+    path: /metrics
+    honorLabels: true
+    relabelings:
+    - sourceLabels: [__meta_kubernetes_pod_ip]
+      separator: ;
+      regex: (.*)
+      targetLabel: pod_ip
+      replacement: $1
+      action: replace
+    - sourceLabels: [__meta_kubernetes_pod_label_brokerId]
+      separator: ;
+      regex: (.*)
+      targetLabel: brokerId
+      replacement: $1
+      action: replace
+    - sourceLabels: [__meta_kubernetes_pod_label_kafka_cr]
+      separator: ;
+      regex: (.*)
+      targetLabel: kafka_cr
+      replacement: $1
+      action: replace
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: cruisecontrol-servicemonitor
+  labels:
+    app: cruisecontrol
+    kafka_cr: kafka
+    release: prometheus-operator
+spec:
+  selector:
+    matchLabels:
+      app: cruisecontrol
+  namespaceSelector:
+    matchNames:
+    - kb
+  endpoints:
+  - interval: 10s
+    port: metrics
+    path: /metrics
+    honorLabels: true
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: kubelet-servicemonitor
+  labels:
+    app: kubelet
+    kafka_cr: kafka
+    release: prometheus-operator
+spec:
+  jobLabel: k8s-app
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: kubelet
+      k8s-app: kubelet
+  namespaceSelector:
+    matchNames:
+    - kube-system
+  endpoints:
+  - bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+    honorLabels: true
+    port: https-metrics
+    relabelings:
+    - sourceLabels:
+      - __metrics_path__
+      targetLabel: metrics_path
+    scheme: https
+    tlsConfig:
+      caFile: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+      insecureSkipVerify: true
+  - bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+    honorLabels: true
+    path: /metrics/cadvisor
+    port: https-metrics
+    relabelings:
+    - sourceLabels:
+      - __metrics_path__
+      targetLabel: metrics_path
+    scheme: https
+    tlsConfig:
+      caFile: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+      insecureSkipVerify: true
+  - bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+    honorLabels: true
+    path: /metrics/probes
+    port: https-metrics
+    relabelings:
+    - sourceLabels:
+      - __metrics_path__
+      targetLabel: metrics_path
+    scheme: https
+    tlsConfig:
+      caFile: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+      insecureSkipVerify: true
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  creationTimestamp: null
+  labels:
+    prometheus: kafka-rules
+  name: kafka-alerts
+spec:
+  groups:
+  - name: KafkaAlerts
+    rules:
+    #- alert: BrokerOverLoaded
+    #  expr: avg(sum by(brokerId, kafka_cr, namespace) (rate(kafka_network_requestmetrics_requests_total[15m]))) by (kafka_cr, namespace) > 30
+    #  for: 5m
+    #  labels:
+    #    severity: alert
+    #    alertGroup: kafka
+    #  annotations:
+    #    description: 'broker {{ $labels.brokerId }} overloaded (current value is: {{ $value }})'
+    #    summary: 'broker overloaded'
+    #    # If brokerConfigGroup is defined it will override scaled broker config
+    #    # brokerConfigGroup: 'default_group'
+    #    storageClass: 'gp2'
+    #    mountPath: '/kafkalog'
+    #    diskSize: '10G'
+    #    image: 'ghcr.io/banzaicloud/kafka:2.13-3.1.0'
+    #    # annotations to be applied onto the broker pod
+    #    # brokerAnnotations: '{ "sidecar.istio.io/logLevel": "trace", "sidecar.istio.io/proxyCPULimit": "50m" }'
+    #    command: 'upScale'
+    #- alert: BrokerUnderReplicated
+    #  expr: kafka_server_replicamanager_underreplicatedpartitions > 0
+    #  for: 5m
+    #  labels:
+    #    severity: alert
+    #    alertGroup: kafka
+    #  annotations:
+    #    description: 'broker {{ $labels.brokerId }} underreplicated'
+    #    summary: 'broker underreplicated'
+    #    storageClass: 'gp2'
+    #    mountPath: '/kafkalog'
+    #    diskSize: '10G'
+    #    image: 'ghcr.io/banzaicloud/kafka:2.13-3.1.0'
+    #    # annotations to be applied onto the broker pod
+    #    # brokerAnnotations: '{ "sidecar.istio.io/logLevel": "trace", "sidecar.istio.io/proxyCPULimit": "50m" }'
+    #    command: 'upScale'
+    #- alert: PartitionCountHigh
+    #  expr: max(kafka_server_replicamanager_partitioncount)  by (namespace, kafka_cr) > 100
+    #  for: 3m
+    #  labels:
+    #    severity: alert
+    #    alertGroup: kafka
+    #  annotations:
+    #    description: 'broker {{ $labels.brokerId }} has high partition count'
+    #    summary: 'high partition count'
+    #    storageClass: 'gp2'
+    #    mountPath: '/kafkalog'
+    #    diskSize: '10G'
+    #    image: 'ghcr.io/banzaicloud/kafka:2.13-3.1.0'
+    #    # annotations to be applied onto the broker pod
+    #    # brokerAnnotations: '{ "sidecar.istio.io/logLevel": "trace", "sidecar.istio.io/proxyCPULimit": "50m" }'
+    #    command: 'upScale'
+    #- alert: PartitionCountLow
+    #  expr: bottomk(1, kafka_server_replicamanager_partitioncount) by (namespace, kafka_cr) < 40
+    #  for: 3m
+    #  labels:
+    #    severity: alert
+    #    alertGroup: kafka
+    #  annotations:
+    #    description: 'broker {{ $labels.brokerId }} has low partition count'
+    #    summary: 'low partition count'
+    #    command: 'downScale'
+    - alert: RemainingDiskSpaceLow
+      expr: (kubelet_volume_stats_available_bytes{job="kubelet",metrics_path="/metrics",namespace=~".*",persistentvolumeclaim=~"kafka-.*"}/ kubelet_volume_stats_capacity_bytes{job="kubelet",metrics_path="/metrics",namespace=~".*",persistentvolumeclaim=~"kafka-.*"})< 0.15 and predict_linear(kubelet_volume_stats_available_bytes{job="kubelet",metrics_path="/metrics",namespace=~".*",persistentvolumeclaim=~"kafka-.*"}[6h], 4 * 24 * 3600) < 0
+      for: 2m
+      labels:
+        severity: alert
+        alertGroup: kafka
+      annotations:
+        description: 'broker has low disk space'
+        summary: 'low diskspace'
+        command: "resizePvc"
+        incrementBy: "10G"
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: prometheus
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: prometheus
+rules:
+- apiGroups: [""]
+  resources:
+  - nodes
+  - nodes/metrics
+  - services
+  - endpoints
+  - pods
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources:
+  - configmaps
+  verbs: ["get"]
+- nonResourceURLs: ["/metrics","/metrics/cadvisor"]
+  verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: prometheus
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: prometheus
+subjects:
+- kind: ServiceAccount
+  name: prometheus
+  namespace: kb
+---
+apiVersion: monitoring.coreos.com/v1
+kind: Prometheus
+metadata:
+  name: kafka-prometheus
+spec:
+  affinity:
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchExpressions:
+          - key: type
+            operator: In
+            values:
+            - db
+            - web
+            - webapi
+            - airflow
+            - gw
+            - col
+            - di
+            - de
+            - fus
+            - transit
+            - etl
+        namespaces: [ "transit","etl","de","web","db","webapi","gw","de","kb","fus","monitoring","col","airflow","di" ]
+        topologyKey: "kubernetes.io/hostname"
+  nodeSelector:
+    kafka: "true"
+  tolerations:
+      - key: "kubernetes.azure.com/scalesetpriority"
+        operator: "Equal"
+        value: "spot"
+        effect: "NoSchedule"
+  podMonitorSelector:
+    matchLabels:
+      release: prometheus-operator
+  serviceAccountName: prometheus
+  alerting:
+    alertmanagers:
+    - namespace: kb
+      name: ko-kafka-operator-alertmanager
+      port: http-alerts
+  serviceMonitorSelector:
+    matchLabels:
+      kafka_cr: kafka
+      release: prometheus-operator
+  ruleSelector:
+    matchLabels:
+      prometheus: kafka-rules
+  resources:
+    requests:
+      memory: 400Mi
+  enableAdminAPI: false

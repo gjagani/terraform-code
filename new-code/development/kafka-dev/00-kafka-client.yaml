@@ -1,0 +1,89 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: kafka-client
+  labels:
+    app: kafka-client
+    # type: kb
+spec:
+  replicas: 1
+  serviceName: ""
+  selector:
+    matchLabels:
+      app: kafka-client
+  podManagementPolicy: "Parallel"
+  template:
+    metadata:
+      labels:
+        app: kafka-client
+    spec:
+      imagePullSecrets:
+      - name: acr-auth-isgdfecontainers
+      containers:
+      - command: ["bash", "-c"]
+        args: ["sleep infinity"]
+        image: docker.io/bitnami/kafka:3.5.1-debian-11-r27
+        # image: docker.io/bitnami/kafka:3.4.1-debian-11-r0
+        name: kafka-client
+        resources:
+          limits:
+            memory: "1000Mi"
+            cpu: "75m"
+          requests:
+            memory: "500Mi"
+            cpu: "50m"
+      nodeSelector:
+        kafka-client: "true"
+      affinity:
+        podAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: type
+                  operator: In
+                  values:
+                  - monitor 
+                  - kafka
+                  - cruisecontrol
+                  - zookeeper-operator                                 
+              topologyKey: "kubernetes.io/hostname"
+              namespaces: ["monitoring","kb","kbdev"]
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              # - key: app
+              #   operator: In
+              #   values:
+              #   - kafka
+              - key: type
+                operator: In
+                values:
+                - db
+                - web
+                - webapi
+                - gw
+                - de
+                - fus
+                - col 
+                - di
+                - airflow
+                - transit
+                - etl
+                - webapidev
+                - webdev
+                - dbdev
+                - didev                
+            topologyKey: "kubernetes.io/hostname"
+            namespaces: ["etl","transit","web","db","webapi","gw","de","fus","monitoring","col","airflow","di","webapidev","webdev","dbdev","didev"]  
+      tolerations:
+      - key: "kubernetes.azure.com/scalesetpriority"
+        operator: "Equal"
+        value: "spot"
+        effect: "NoSchedule"
+      #- key: "node.cloudprovider.kubernetes.io/uninitialized"
+      #  operator: "Equal"
+      #  value: "true"
+      #  effect: "NoSchedule"

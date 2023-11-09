@@ -1,0 +1,28 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-issuer
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    service.beta.kubernetes.io/azure-load-balancer-internal: "true"
+    # nginx.ingress.kubernetes.io/use-regex: "true"
+    # nginx.ingress.kubernetes.io/rewrite-target: /$1
+  name: ingress-rule-airflow
+  namespace: monitoring
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: stg511nj.isgsuite.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: isg-pga-grafana
+            port:
+              number: 80
+        path: /grafana
+        pathType: Prefix
+  tls:
+  - hosts:
+    - stg511nj.isgsuite.com
+    secretName: stg511nj-secret-grafana

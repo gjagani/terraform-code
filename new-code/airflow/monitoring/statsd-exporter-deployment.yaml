@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: statsd-exporter
+  name: statsd-exporter
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: statsd-exporter
+  template:
+    metadata:
+      labels:
+        app: statsd-exporter
+    spec:
+      restartPolicy: Always
+      containers:
+        - args:
+            - statsd_exporter --log.level debug --statsd.mapping-config=/home/statsd-mapping-configs.yaml
+          command:
+            - /bin/sh
+            - -c
+            - --
+          image: meets0ni/statsd-exporter:v2
+          name: statsd-exporter
+          ports:
+            - containerPort: 9102
+            - containerPort: 9125

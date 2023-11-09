@@ -1,0 +1,79 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kafka-perf-producer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kafka-perf
+  strategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: kafka-perf
+    spec:
+      containers:
+      - command: ["bash", "-c"]
+        #args: ["while true; do kafka-producer-perf-test.sh \
+        #        --topic sch.test-topic \
+        #        --num-records 5000 \
+        #        --record-size 1000000000000 \
+        #        --throughput -1 \
+        #        --producer-props acks=1 \
+        #        bootstrap.servers=kafka-headless:29092 \
+        #        buffer.memory=67108864 \
+        #        batch.size=8196; sleep 10; done"]
+        #  
+        args: ["while true; do kafka-producer-perf-test.sh \
+                --topic test-topic \
+                --num-records 1000 \
+                --payload-file /tmp/data_second_0.zip
+                --throughput -1 \
+                --producer-props acks=1 partitioner.class=org.apache.kafka.clients.producer.UniformStickyPartitioner \
+                bootstrap.servers=kafka-all-broker:29092 \
+                batch.size=250; sleep 2;\
+                done"]
+        image: docker.io/bitnami/kafka:2.7.0-debian-10-r50
+        name: perf-producer
+        volumeMounts:
+        - name: data-vol
+          mountPath: /tmp/data_second_0.zip
+          subPath: data_second_0.zip
+      volumes:
+        - name: data-vol
+          configMap:
+            name: sample-data-cfg
+      nodeSelector:
+       # kb: "true"
+        kafka: "true"
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - kafka
+            topologyKey: "kubernetes.io/hostname"
+          - labelSelector:
+              matchExpressions:
+              - key: name
+                operator: In
+                values:
+                - zo-zookeeper-operator
+            topologyKey: "kubernetes.io/hostname"
+          - labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - kafka-perf-consumer
+            topologyKey: "kubernetes.io/hostname"
+      tolerations:
+      - key: "kubernetes.azure.com/scalesetpriority"
+        operator: "Equal"
+        value: "spot"
+        effect: "NoSchedule"

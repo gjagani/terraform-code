@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: adminapidev-service-bridge
+  namespace: webdev
+spec:
+  type: ExternalName
+  externalName: adminapidev-service.webapidev
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: clientapidev-service-bridge
+  namespace: webdev
+spec:
+  type: ExternalName
+  externalName: clientapidev-service.webapidev
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: accountapidev-service-bridge
+  namespace: webdev
+spec:
+  type: ExternalName
+  externalName: accountapidev-service.webapidev

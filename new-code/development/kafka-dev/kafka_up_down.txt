@@ -1,0 +1,44 @@
+======================
+start kafka
+======================
+helm install zookeeper-operator zookeeper-operator -n kb
+helm install kafka-operator kafka-operator -n kb
+kubectl apply -f 00-kafka-client.yaml -n kb
+kubectl apply -f 01-zookeeper.yml -n kb
+kubectl apply -f 10-kafkacluster.yaml -n kb
+kubectl apply -f 11_kafkacluster-prometheus.yaml -n kb 
+kubectl apply -f kafka-topic-templet.yaml -n kb 
+======================
+check status of kafka
+======================
+kubectl get kafkacluster kafka -n kb
+
+======================
+stop kafka
+======================
+
+=======
+kubectl delete -f kafka-topic-templet.yaml -n kb 
+kubectl delete -f 11_kafkacluster-prometheus.yaml -n kb 
+kubectl delete -f 00-kafka-client.yaml -n kb
+kubectl delete -f 10-kafkacluster.yaml -n kb
+kubectl delete -f 01-zookeeper.yml -n kb
+helm delete kafka-operator -n kb
+helm delete zookeeper-operator -n kb
+======================
+
+======================
+## START: FOLLOW FOLLOWING STEPS TO PERFORM TEST TO CONNECT AND SEND SAMPLE DATA INTO TEST TOPIC
+
+kubectl apply -f test-topic.yaml -n kb
+kubectl apply -f 20-perf-producer.yaml -n kb
+kubectl apply -f 21-perf-consumer.yaml -n kb
+#GET INSIDE KAKFA CLIENT TO SEE DATA COMMING IN KAFKA TOPIC
+kubectl exec -it kafka-client-0 -n kb -- bash
+watch /opt/bitnami/kafka/bin/kafka-consumer-groups.sh --bootstrap-server kafka-all-broker:29092 --describe --all-groups
+kubectl delete -f test-topic.yaml -n kb
+kubectl delete -f 21-perf-consumer.yaml -n kb
+kubectl delete -f 20-perf-producer.yaml -n kb
+
+## END: ===========
+======================

@@ -1,0 +1,95 @@
+keep_alive: 75
+worker_processes: 36
+
+postgres:
+  connection_string: postgresql://martin_user:martin_user@timescale-db-v15.db:5432/isgpostgres
+  
+  pool_size: 60
+  #auto_publish:
+    # Optionally limit to just these schemas
+  #  from_schemas:
+  #    - nj_q12019
+
+  #tables:
+  #  streets:
+  #    schema: nj_q12019
+  #    table: streets
+  #    srid: 4326
+  #    geometry_column: geom
+  #    geometry_type: GEOMETRY
+  #    properties:
+  #      gid: int4
+  #      st_name: varchar
+  #      func_class: varchar
+  functions:
+    #street_route_osm_func:
+      # Schema name (required)
+    #  schema: osm_master
+      # Function name (required)
+    #  function: function_street_zxy_query
+    #street_route_osm_func_tileserv:
+      # Schema name (required)
+     # schema: osm_master
+      # Function name (required)
+      #function: function_street_zxy_query_tileserv  
+    #event_osm_func_tileserv:
+      # Schema name (required)
+     # schema: osm_master
+      # Function name (required)
+    #  function: function_events_zxy_query_tileserv     
+    #milemarker_osm_func_tileserv:
+      # Schema name (required)
+     # schema: osm_master
+      # Function name (required)
+      #function: function_mile_marker_zxy_query_tileserv
+    #congestion_osm_func_tileserv:
+      # Schema name (required)
+     # schema: osm_master
+      # Function name (required)
+      #function: function_congestion_zxy_query_tileserv
+    #transit_track_zxy:
+       # Schema name (required)
+     # schema: dfe_njtransit
+      # Function name (required)
+      #function: function_transit_track_zxy 
+    #transit_stop_zxy:
+      # Schema name (required)
+     # schema: dfe_njtransit
+      # Function name (required)
+      #function: function_transit_stop_zxy
+    #livespeed_func_param:
+        # Schema name (required)
+     #   schema: dfe_current_winner_tt
+        # Function name (required)
+      #  function: function_livespeed_zxy_martin
+    #congestion_func_param:
+       # Schema name (required)
+     #  schema: dfe_current_winner_tt
+       # Function name (required)
+      # function: function_congestion_zxy_martin
+    #rawdata_func_param:
+       # Schema name (required)
+     #  schema: dfe_current_winner_tt
+       # Function name (required)
+      # function: function_rawdata_zxy_martin
+    livespeed_func_param:
+        # Schema name (required)
+        schema: map_data
+        # Function name (required)
+        function: function_livespeed_zxy_martin
+    livespeed_func_param_all_state:
+        # Schema name (required)
+        schema: map_data
+        # Function name (required)
+        function: function_livespeed_zxy_martin_all_state
+mbtiles:
+  paths: 
+  - /martin/osm.mbtiles
+#     # scan this whole dir, matching all *.mbtiles files
+# #    - /mbtiles
+#     # specific mbtiles file will be published as mbtiles2 source
+#     #- /mbtiles/sample-mbtile-file.mbtiles
+  sources:
+#     #named source matching source name to a single file
+    osmvectortile: /martin/osm.mbtiles
+  

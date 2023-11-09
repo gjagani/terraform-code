@@ -1,0 +1,105 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  namespace: webdev
+  name: martin-tile-dev
+  labels:
+    app: martin-tile-dev
+    type: webdev
+spec:
+  selector:
+    matchLabels:
+      app: martin-tile-dev # has to match .spec.template.metadata.labels
+  serviceName: martin-tile-svc-dev
+  replicas: 1 # by default is 1
+  minReadySeconds: 10 # by default is 0
+  template:
+    metadata:
+      labels:
+        app: martin-tile-dev
+        type: webdev
+    spec:
+      terminationGracePeriodSeconds: 10
+      containers:
+      - name: nginx
+        image: nginx
+        resources:
+          requests:
+            cpu: "30m"
+            memory: 100Mi
+          limits:
+            cpu: "70m"
+            memory: 250Mi
+        ports:
+        - containerPort: 80
+          name: web
+        volumeMounts:
+        - name: nginx-cfg-dev-vol
+          mountPath: /etc/nginx/nginx.conf
+          subPath: nginx.conf                  
+      - command: ["sh", "-c"]
+        args: ["martin -c /config/config.yaml"]      
+        name: martin-tile-dev
+        image: ghcr.io/maplibre/martin
+        ports:
+        - containerPort: 3000
+          name: martin-tile-dev
+        volumeMounts:
+        - name: martin-cfg-dev-vol
+          mountPath: /config/config.yaml
+          subPath: config.yaml  
+        - name: azure
+          mountPath: /martin                       
+      volumes:
+      - name: martin-cfg-dev-vol
+        configMap:
+          name: martin-cfg-dev
+      - name: nginx-cfg-dev-vol
+        configMap:
+          name: nginx-cfg-dev
+      - name: azure
+        azureFile:
+          secretName: 511njfileshare-secret
+          shareName: 511njfileshare/martin 
+          readOnly: false
+      affinity:
+        podAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100  
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: type
+                  operator: In
+                  values:
+                  - webdev
+                  - webapidev
+              topologyKey: "kubernetes.io/hostname"
+              namespaces: ["webdev","webapidev"]
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: type
+                operator: In
+                values:
+                - monitoring 
+                - airflow
+                - db
+                - di
+                - kb
+                - airflowdev
+                - dbdev
+                - didev
+                - kbdev
+                - web
+                - webapi
+            topologyKey: "kubernetes.io/hostname"
+            namespaces: ["monitoring","airflow","db","di","kb","web","webapi","airflowdev","dbdev","didev","kbdev","webdev","webapidev"]                         
+      nodeSelector:
+        martin: "true"
+      tolerations:
+      - key: "kubernetes.azure.com/scalesetpriority"
+        operator: "Equal"
+        value: "spot"
+        effect: "NoSchedule"

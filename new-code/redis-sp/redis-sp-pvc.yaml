@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: redis-sp-pvc
+  labels:
+    redissp: "true"
+    type: db
+    app: redis-sp
+spec:
+  accessModes:
+  - ReadOnlyMany
+  resources:
+    requests:
+      storage: 15Gi
+  storageClassName: nfs

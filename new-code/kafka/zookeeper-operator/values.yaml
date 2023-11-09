@@ -1,0 +1,140 @@
+## Default values for zookeeper-operator.
+## This is a YAML-formatted file.
+## Declare variables to be passed into your templates.
+
+global:
+  # Lists the secrets you need to use to pull zookeeper-operator image from a private registry.
+  imagePullSecrets: []
+    # - name: acr-auth-isgdfecontainers
+  # - private-registry-key
+
+image:
+  # repository: pravega/zookeeper-operator
+  repository: pravega/zookeeper-operator
+  tag: 0.2.15
+  pullPolicy: IfNotPresent
+
+securityContext: {}
+#  runAsUser: 1001
+#  runAsGroup: 1001
+
+## Additional labels to be added to resources
+labels:
+  app: zookeeper-operator
+  group: kafka
+  type: kb
+
+## Install RBAC roles and bindings.
+rbac:
+  create: true
+
+## Service account name and whether to create it.
+serviceAccount:
+  create: true
+  name: zookeeper-operator
+  ## Optionally specify an array of imagePullSecrets. Will override the global parameter if set
+  # imagePullSecrets:
+
+## Whether to create the CRD.
+crd:
+  create: true
+
+## Specifies which namespace(s) the Operator should watch over.
+## Default: An empty string means all namespaces.
+## Multiple namespaces can be configured using a comma separated list of namespaces
+watchNamespace: "kb,kbdev"
+
+## Operator pod resources
+resources: 
+  limits:
+    memory: "1000Mi"
+    cpu: "75m"
+  requests:
+    memory: "500Mi"
+    cpu: "50m"
+
+# Scheduling constraints
+nodeSelector:
+  kafka: "true"
+affinity:
+  podAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+    - weight: 1
+      podAffinityTerm:
+        labelSelector:
+          matchExpressions:
+          - key: app.kubernetes.io/name
+            operator: In
+            values:
+              - kafka-operator
+              - monitor 
+              - kafka
+              - cruisecontrol
+              - zookeeper-operator 
+        topologyKey: "kubernetes.io/hostname"
+  podAntiAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+    - labelSelector:
+        matchExpressions:
+        # - key: app
+        #   operator: In
+        #   values:
+        #     - cruisecontrol
+        #     - zookeeper-operator
+        #     - zookeeper
+        - key: type
+          operator: In
+          values:
+          - db
+          - web
+          - webapi
+          - monitor
+          - airflow
+          - gw
+          - col
+          - di
+          - de
+          - fus
+          - transit
+          - etl
+      namespaces: ["transit","etl","de","web","db","webapi","gw","de","kb","fus","monitoring","col","airflow","di"]
+      topologyKey: "kubernetes.io/hostname"
+tolerations:
+- key: "kubernetes.azure.com/scalesetpriority"
+  operator: "Equal"
+  value: "spot"
+  effect: "NoSchedule"
+
+# Pod annotations
+annotations: {}
+
+hooks:
+  backoffLimit: 10
+  image:
+    repository: lachlanevenson/k8s-kubectl
+    tag: v1.23.2
+  ## Whether to create pre-delete hook which ensures that
+  ## the operator cannot be deleted till the zookeeper cluster
+  ## custom resources have been cleaned up
+  delete: true
+  securityContext: {}
+  #  runAsUser: 1001
+  #  runAsGroup: 1001
+
+
+## Additional Sidecars Configuration.
+additionalSidecars: {}
+# - name: nginx
+#   image: nginx:latest
+
+## Additional Environment Variables.
+additionalEnv: {}
+
+## Additional volumes required for sidecars.
+additionalVolumes: {}
+# - name: volume1
+#   emptyDir: {}
+# - name: volume2
+#   emptyDir: {}
+
+disableFinalizer: false

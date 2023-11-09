@@ -1,0 +1,1 @@
+helm install ingress-dev ingress-nginx-dev -n ingressdev

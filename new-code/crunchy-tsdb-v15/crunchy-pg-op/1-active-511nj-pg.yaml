@@ -1,0 +1,275 @@
+apiVersion: postgres-operator.crunchydata.com/v1beta1
+kind: PostgresCluster
+metadata:
+  name: active-511nj
+spec:
+  image: registry.developers.crunchydata.com/crunchydata/crunchy-postgres-gis:ubi8-15.4-3.3-1
+  postgresVersion: 15
+
+  databaseInitSQL:
+    key: init.sql
+    name: active-511nj-pg-init-sql
+
+  standby:
+    enabled: false
+    repoName: repo1
+    #host: "172.16.1.194"
+    #port: 9000
+
+  customTLSSecret:
+    name: 511nj-pg-cluster-custom-cert
+  customReplicationTLSSecret:
+    name: 511nj-pg-replication-custom-cert
+
+  shutdown: false
+  
+  patroni:
+    dynamicConfiguration:
+      ## synchronous_mode: true
+      postgresql:
+        parameters:
+          shared_preload_libraries: timescaledb,pgaudit
+        ##  synchronous_commit: "on"
+          max_connections: 250
+          shared_buffers: "2560MB"
+          effective_cache_size: "7680MB"
+          maintenance_work_mem: "640MB"
+          checkpoint_completion_target: 0.9
+          wal_buffers: "16MB"
+          default_statistics_target: 100
+          random_page_cost: 1.1
+          effective_io_concurrency: 200
+          work_mem: "6553kB"
+          huge_pages: "off"
+          min_wal_size: "1GB"
+          max_wal_size: "4GB"
+          timezone: "UTC"
+          log_timezone: "UTC"
+          timescaledb.max_background_workers: 8
+          max_prepared_transactions: 150
+      #pg_hba:
+      #- 'hostssl replication replicator all scram-sha-256'
+      #- 'hostssl all         all        all scram-sha-256'
+
+  users: 
+    - name: isgpguser
+      databases:
+        - isgpostgres
+      options: "SUPERUSER"
+    - name: isgpgbouncerusr
+      options: "CREATEDB CREATEROLE"
+    - name: nativelinkcondi
+      options: "CREATEDB CREATEROLE"      
+    - name: postgres
+
+  instances:
+    - name: stg-pg
+      replicas: 2
+      resources:
+        limits:
+          cpu: 1200m
+          memory: "10G"
+        requests:
+          cpu: 1200m
+          memory: "10G"          
+      dataVolumeClaimSpec:
+        accessModes:
+        - "ReadWriteOnce"
+        storageClassName: "managed-csi-premium-zrs"
+        resources:
+          requests:
+            storage: 63Gi
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: crunchypg
+                operator: In
+                values:
+                - "true"
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - topologyKey: kubernetes.io/hostname
+              labelSelector:
+                matchLabels:
+                  postgres-operator.crunchydata.com/cluster: active-511nj
+                  postgres-operator.crunchydata.com/instance-set: stg-pg
+      tolerations:
+      - key: "kubernetes.azure.com/scalesetpriority"
+        operator: "Equal"
+        value: "spot"
+        effect: "NoSchedule" 
+
+      # FOR SAPERATE STORAGE FOR WAL.
+      # walVolumeClaimSpec:
+      #   accessModes:
+      #   - "ReadWriteOnce"
+      #   storageClassName: "managed-csi-premium"
+      #   resources:
+      #     requests:
+      
+  port: 9000
+
+  service:
+    metadata:
+      annotations: 
+        service.beta.kubernetes.io/azure-load-balancer-internal: "true"
+    type: LoadBalancer
+
+  backups:
+    pgbackrest:
+      #image: registry.developers.crunchydata.com/crunchydata/crunchy-pgbackrest:ubi8-2.45-3
+      image: registry.developers.crunchydata.com/crunchydata/crunchy-pgbackrest:ubi8-2.47-1
+      
+      # TO TAKE MANUAL BACKUP
+      ##manual:
+      ##  repoName: repo1
+      ##  options:
+      ##  - --type=full
+      ##  - --type=incr
+
+      # TO RESTORE IN PITR.
+      ##restore:
+      ##  enabled: true
+      ##  repoName: repo1
+      ##  options:
+      ##  - --type=time
+      ##  - --target="2023-10-05 13:00:00"
+      ##  - --set="20230926-145837F"  --NOT WORKING
+
+      configuration:
+      - secret:
+          name: 511nj-azure-secret
+      global:
+        repo1-retention-full: "2"
+        repo1-retention-full-type: count
+        repo1-path: /511nj-staging
+      # https://www.crunchydata.com/blog/pgbackrest-file-bundling-and-block-incremental-backup
+        repo1-bundle: "y"
+      # repo1-block: "y" --AVAILABLE IN BETA VERSION
+        delta: "y"
+        start-fast: "y"
+        process-max: "6"
+        archive-async: "y"
+      # The purpose of this feature is to prevent the log volume from filling up at which point PostgreSQL will stop completely. 
+      # Better to lose the backup than have PostgreSQL go down.
+        archive-push-queue-max: "10GiB"
+        spool-path: /pgdata/db/spool
+      jobs:
+        affinity:
+          nodeAffinity:
+            requiredDuringSchedulingIgnoredDuringExecution:
+              nodeSelectorTerms:
+              - matchExpressions:
+                - key: crunchypg
+                  operator: In
+                  values:
+                  - "true"            
+          podAntiAffinity:
+            requiredDuringSchedulingIgnoredDuringExecution:
+              - topologyKey: kubernetes.io/hostname
+                labelSelector:
+                  matchLabels:
+                    postgres-operator.crunchydata.com/cluster: active-511nj
+                    postgres-operator.crunchydata.com/instance-set: stg-pg
+        tolerations:
+        - key: "kubernetes.azure.com/scalesetpriority"
+          operator: "Equal"
+          value: "spot"
+          effect: "NoSchedule" 
+        ##affinity:
+        ##  nodeAffinity:
+        ##    requiredDuringSchedulingIgnoredDuringExecution:
+        ##      nodeSelectorTerms:
+        ##      - matchExpressions:
+        ##        - key: kubernetes.io/role
+        ##          operator: In
+        ##          values:
+        ##          - "agent"
+        ##        - key: beta.kubernetes.io/os
+        ##          operator: In
+        ##          values:
+        ##          - "linux"
+        ##        - key: type
+        ##          operator: In
+        ##          values:
+        ##          - "virtual-kubelet"
+        ##tolerations:
+        ##- key: virtual-kubelet.io/provider
+        ##  operator: Exists
+        ##- key: azure.com/aci
+        ##  effect: NoSchedule
+
+      repos:
+      - name: repo1
+        azure:
+          container: "pgbackups"
+        schedules:
+          full: "15 */12  * * *"
+          incremental: "*/20 * * * *"
+        
+  proxy:
+    pgBouncer:
+      config:
+        global:
+          application_name_add_host: "1"
+          default_pool_size: "100"
+          max_client_conn: "300"
+          pool_mode: session  
+          server_tls_sslmode: prefer
+        #  client_tls_sslmode: disable
+        databases:
+          writes: host=active-511nj-primary port=9000 dbname=isgpostgres
+          reads: host=active-511nj-replicas port=9000 dbname=isgpostgres
+        #users:
+        #  laukik: hello
+      #image: registry.developers.crunchydata.com/crunchydata/crunchy-pgbouncer:ubi8-1.19-2
+      image: registry.developers.crunchydata.com/crunchydata/crunchy-pgbouncer:ubi8-1.19-5
+      replicas: 2
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: crunchypg
+                operator: In
+                values:
+                - "true"
+        podAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - topologyKey: kubernetes.io/hostname
+              labelSelector:
+                matchLabels:
+                  postgres-operator.crunchydata.com/cluster: active-511nj
+                  postgres-operator.crunchydata.com/instance-set: stg-pg              
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - topologyKey: kubernetes.io/hostname
+              labelSelector:
+                matchLabels:
+                  postgres-operator.crunchydata.com/role: pgbouncer
+      tolerations:
+      - key: "kubernetes.azure.com/scalesetpriority"
+        operator: "Equal"
+        value: "spot"
+        effect: "NoSchedule"                        
+      service:
+        metadata:
+          annotations: 
+            service.beta.kubernetes.io/azure-load-balancer-internal: "true"
+        type: LoadBalancer
+      port: 9000
+      
+  #userInterface:
+  #  pgAdmin:
+  #    image: registry.developers.crunchydata.com/crunchydata/crunchy-pgadmin4:ubi8-4.30-16
+  #    dataVolumeClaimSpec:
+  #      accessModes:
+  #        - "ReadWriteOnce"
+  #      storageClassName: "managed-csi-premium"
+  #      resources:
+  #        requests:
+  #          storage: 1Gi
+  #    service:
+  #      type: LoadBalancer

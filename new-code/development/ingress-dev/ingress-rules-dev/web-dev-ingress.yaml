@@ -1,0 +1,35 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    kubernetes.io/ingress.class: "nginx-dev"
+    cert-manager.io/cluster-issuer: letsencrypt-issuer
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    service.beta.kubernetes.io/azure-load-balancer-internal: "true"
+  name: ingress-rule-dev511nj
+  namespace: webdev
+spec:
+  ingressClassName: nginx-dev
+  rules:
+  - host: dev511nj.isgsuite.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: web-dev-svc
+            port:
+              number: 80
+        path: /
+        pathType: Prefix
+      - backend:
+          service:
+            name: keycloak-dev
+            port:
+              number: 80
+        path: /keyclaok
+        pathType: Prefix
+  tls:
+  - hosts:
+    - dev511nj.isgsuite.com
+    secretName: dev511nj-secret
+

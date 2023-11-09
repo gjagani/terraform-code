@@ -1,0 +1,26 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-issuer
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    service.beta.kubernetes.io/azure-load-balancer-internal: "true"
+  name: ingress-airflow
+  namespace: airflow
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: stg511njairflow.isgsuite.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: airflow
+            port:
+              number: 8080
+        path: /
+        pathType: Prefix
+  tls:
+  - hosts:
+    - stg511njairflow.isgsuite.com
+    secretName: stg511nj-secret-airflow

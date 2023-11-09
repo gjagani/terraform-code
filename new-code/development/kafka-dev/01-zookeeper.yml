@@ -1,0 +1,87 @@
+apiVersion: zookeeper.pravega.io/v1beta1
+kind: ZookeeperCluster
+metadata:
+  name: zookeeper
+spec:
+  replicas: 2
+  storageType: persistence
+  #storageType: Ephemeral
+  pod:
+    nodeSelector:
+      kafka: "true"
+    resources:
+      limits:
+        memory: "1000Mi"
+        cpu: "200m"
+      requests:
+        memory: "500Mi"
+        cpu: "100m"
+    affinity:
+      podAffinity:
+        preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          podAffinityTerm:
+            labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values:
+                  - kafka
+                  # - cruisecontrol
+                  # - zookeeper-operator
+                  # - monitor 
+            topologyKey: "kubernetes.io/hostname"
+            namespaces: ["kbdev"]
+        # - weight: 2
+        #   podAffinityTerm:
+        #     labelSelector:
+        #       matchExpressions:
+        #       - key: app.kubernetes.io/name
+        #         operator: In
+        #         values:
+        #           - kafka-operator
+        #     topologyKey: "kubernetes.io/hostname"            
+      podAntiAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+        - labelSelector:
+            matchExpressions:
+            - key: app
+              operator: In
+              values:
+              - zookeeper
+          topologyKey: "kubernetes.io/hostname"
+          namespaces: ["kbdev"]              
+        - labelSelector:
+            matchExpressions:
+            - key: type
+              operator: In
+              values:
+              - db
+              - web
+              - webapi
+              - monitor
+              - airflow
+              - di
+              - webapidev
+              - webdev
+              - dbdev
+              - didev             
+          namespaces: [ "webdev","webapidev","dbdev","didev","web","db","webapi","gw","kb","monitoring","airflow","di" ]
+          topologyKey: "kubernetes.io/hostname"
+    tolerations:
+    - key: "kubernetes.azure.com/scalesetpriority"
+      operator: "Equal"
+      value: "spot"
+      effect: "NoSchedule"
+  labels:
+    app: zookeeper
+    group: kafka
+    type: kb
+  persistence:
+    spec:
+      storageClassName: managed-csi-premium-zrs
+      resources:
+        requests:
+          storage: 3Gi
+      accessModes:
+      - ReadWriteOnce

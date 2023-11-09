@@ -1,0 +1,71 @@
+
+#echo 'ssl.endpoint.identification.algorithm=' >> /tmp/consumer.config; \
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: kafka-perf-consumer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kafka-perf-consumer
+  podManagementPolicy: "Parallel"
+  serviceName: ""
+  template:
+    metadata:
+      labels:
+        app: kafka-perf-consumer
+    spec:
+      containers:
+      - command: ["bash", "-c"]
+        args: ["echo 'session.timeout.ms=60000' > /tmp/consumer.config; echo 'group.instance.id='$HOSTNAME >> /tmp/consumer.config; \
+                       echo 'partition.assignment.strategy=org.apache.kafka.clients.consumer.RoundRobinAssignor' >> /tmp/consumer.config; \
+                while true; do kafka-consumer-perf-test.sh \
+                --topic test-topic \
+                --group my-group --messages=100 --consumer.config=/tmp/consumer.config \
+                --bootstrap-server kafka-all-broker:29092; done"]
+        image: docker.io/bitnami/kafka:2.7.0-debian-10-r50
+        name: perf-consumer
+        resources:
+          requests:
+            cpu: 600m
+      #nodeSelector:
+      #  kubernetes.io/role: agent
+      #  type: virtual-kubelet
+      #tolerations:
+      #- key: virtual-kubelet.io/provider
+      #  operator: Exists
+      #- key: azure.com/aci
+      #  effect: NoSchedule
+      nodeSelector:
+       # kb: "true"
+        kafka: "true"
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - kafka
+            topologyKey: "kubernetes.io/hostname"
+          - labelSelector:
+              matchExpressions:
+              - key: name
+                operator: In
+                values:
+                - zo-zookeeper-operator
+            topologyKey: "kubernetes.io/hostname"
+          - labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - kafka-perf
+            topologyKey: "kubernetes.io/hostname"
+      tolerations:
+      - key: "kubernetes.azure.com/scalesetpriority"
+        operator: "Equal"
+        value: "spot"
+        effect: "NoSchedule"

@@ -1,0 +1,30 @@
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    meta.helm.sh/release-name: airflow-dev
+    meta.helm.sh/release-namespace: airflowdev
+  labels:
+    app: airflow
+    app.kubernetes.io/instance: airflow-dev
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: airflow
+    helm.sh/chart: airflow-14.3.6
+    type: airflow
+  name: airflow-dev-ext
+  namespace: airflowdev
+spec:
+  ports:
+  - name: http
+    port: 8080
+    protocol: TCP
+    targetPort: http
+  - name: tcp
+    port: 9030
+    protocol: TCP
+    targetPort: http
+  selector:
+    app.kubernetes.io/component: web
+    app.kubernetes.io/instance: airflow-dev
+    app.kubernetes.io/name: airflow
+  type: LoadBalancer

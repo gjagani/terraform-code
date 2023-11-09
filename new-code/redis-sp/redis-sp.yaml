@@ -1,0 +1,86 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis-sp
+  labels:
+    app: redis-sp
+    type: db 
+spec:
+  selector:
+    matchLabels:
+      app: redis-sp
+  replicas: 1
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: redis-sp
+        type: db
+    spec:
+      # imagePullSecrets:
+      # - name: acr-auth-isgdfecontainers
+      containers:
+      - name: redis-server-stack-container  
+        image: redis/redis-stack:7.2.0-v0
+        env:
+        - name: REDIS_ARGS
+          value: "--requirepass FAwnYRe --notify-keyspace-events xeKE --appendonly no --tcp-backlog 65536 --maxclients 200000 --maxmemory 20gb --save 265000000 1000 --databases 30"
+        - name: REDISEARCH_ARGS
+          value: "MAXDOCTABLESIZE 10000 GC_POLICY FORK FORK_GC_RUN_INTERVAL 1 MAXSEARCHRESULTS -1 "
+        ports:
+        - containerPort: 6379
+          name: db
+        resources:
+          limits:
+            cpu: "3"
+            memory: 25000Mi
+          requests:
+            cpu: "2"
+            memory: 20000Mi
+        volumeMounts:
+        - name: redis-data-pvc
+          mountPath: "/data/"      
+      affinity:
+        # podAffinity:
+          # preferredDuringSchedulingIgnoredDuringExecution:
+          # - weight: 100  
+          #   podAffinityTerm:
+          #     labelSelector:
+          #       matchExpressions:
+          #       - key: app
+          #         operator: In
+          #         values:
+          #         - redis-sp
+          #     topologyKey: "kubernetes.io/hostname"
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: type
+                operator: In
+                values:
+                - db
+                - web
+                - webapi
+                - gw
+                - de
+                - kb
+                - fus
+                - monitor
+                - airflow
+                - col
+                - di
+            topologyKey: "kubernetes.io/hostname"
+            namespaces: [ "web","db","webapi","gw","de","kb","fus","monitoring","col","airflow","di" ]        
+      nodeSelector:
+        redis: "true"
+      tolerations:
+      - key: "kubernetes.azure.com/scalesetpriority"
+        operator: "Equal"
+        value: "spot"
+        effect: "NoSchedule"
+      volumes:
+      - name: redis-data-pvc    
+        persistentVolumeClaim:
+          claimName: redis-sp-pvc

@@ -1,0 +1,37 @@
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    meta.helm.sh/release-name: timescale-db-v15-dev
+    meta.helm.sh/release-namespace: dbdev
+    service.beta.kubernetes.io/azure-load-balancer-internal: "true"
+  labels:
+    app: timescale-db-v15-dev
+    app.kubernetes.io/component: timescaledb
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: timescale-db-v15-dev
+    app.kubernetes.io/version: 0.33.1
+    chart: timescaledb-single-0.33.1
+    cluster-name: timescale-db-v15-dev
+    heritage: Helm
+    release: timescale-db-v15-dev
+    role: master
+    type: db
+  name: timescale-db-v15-dev-internal
+  namespace: dbdev
+spec:
+  internalTrafficPolicy: Cluster
+  ipFamilies:
+  - IPv4
+  ipFamilyPolicy: SingleStack
+  ports:
+  - name: postgresql
+    port: 19000
+    protocol: TCP
+    targetPort: postgresql
+  selector:
+    app: timescale-db-v15-dev
+    cluster-name: timescale-db-v15-dev
+    role: master
+  type: LoadBalancer
+
